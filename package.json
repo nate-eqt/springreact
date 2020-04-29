@@ -1,0 +1,38 @@
+{
+  "name": "spring-react",
+  "version": "1.0.0",
+  "description": "spring data + react for accessibility",
+  "main": "index.js",
+  "scripts": {
+    "watch": "webpack --watch -d --output ./target/classes/static/built/bundle.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nate-eqt/springreact.git"
+  },
+  "keywords": [
+    "spring",
+    "react",
+    "section508",
+    "accessibility"
+  ],
+  "dependencies": {
+    "react": "^16.5.2",
+    "react-dom": "^16.5.2",
+    "rest": "^1.3.1"
+  },
+  "author": "Nathan East",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nate-eqt/springreact/issues"
+  },
+  "homepage": "https://github.com/nate-eqt/springreact#readme",
+  "devDependencies": {
+    "@babel/core": "^7.1.0",
+    "@babel/preset-env": "^7.1.0",
+    "@babel/preset-react": "^7.0.0",
+    "babel-loader": "^8.0.2",
+    "webpack": "^4.19.1",
+    "webpack-cli": "^3.1.0"
+  }
+}
