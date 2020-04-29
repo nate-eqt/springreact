@@ -14,6 +14,12 @@ public class Employee{
 
     private Employee() {}
 
+    public Employee(String firstName, String lastName, String description) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.description = description;
+    }
+
     @Override
     public boolean equals(Object o){
         if(this == o) return true;
