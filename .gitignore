@@ -29,3 +29,7 @@ build/
 
 ### VS Code ###
 .vscode/
+/src/main/resources/static/built/
+/node_modules/
+/package-lock.json
+/node/

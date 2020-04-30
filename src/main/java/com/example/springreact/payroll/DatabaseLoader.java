@@ -21,6 +21,10 @@ public class DatabaseLoader implements CommandLineRunner {
         this.repo.save(new Employee("Han","Solo","Smuggler"));
         this.repo.save(new Employee("Luke","Skywalker","Jedi"));
         this.repo.save(new Employee("Leia","Organa-Solo","General"));
+        this.repo.save(new Employee("Kylo","Ren","Twat"));
+        this.repo.save(new Employee("Finn","","Rando"));
+        this.repo.save(new Employee("Poe","Dameron","Pilot"));
+        this.repo.save(new Employee("Rey","","Jedi"));
     }
 
 }
