@@ -19,6 +19,8 @@ public class DatabaseLoader implements CommandLineRunner {
     private final EmployeeRepo repo;
     private final ManagerRepo managers;
 
+    private static final String ROLE_MANAGER = "ROLE_MANAGER";
+    private static final String DEFAULT_PASSWORD = "password";
     @Autowired
     public DatabaseLoader(EmployeeRepo repo, ManagerRepo managerRepo){
         this.repo = repo;
@@ -26,13 +28,13 @@ public class DatabaseLoader implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... strings) throws Exception{
-        Manager george = this.managers.save(new Manager("george", "password", "ROLE_MANAGER"));
-        Manager mickey = this.managers.save(new Manager("mickey", "password","ROLE_MANAGER"));
+    public void run(String... strings) {
+        Manager george = this.managers.save(new Manager("george", DEFAULT_PASSWORD, ROLE_MANAGER));
+        Manager mickey = this.managers.save(new Manager("mickey", DEFAULT_PASSWORD,ROLE_MANAGER));
 
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("george", "password",
-                        AuthorityUtils.createAuthorityList("ROLE_MANAGER")));
+                new UsernamePasswordAuthenticationToken("george", DEFAULT_PASSWORD,
+                        AuthorityUtils.createAuthorityList(ROLE_MANAGER)));
 
         this.repo.save(new Employee("Han","Solo","Smuggler",george));
         this.repo.save(new Employee("Luke","Skywalker","Jedi",george));
@@ -40,8 +42,8 @@ public class DatabaseLoader implements CommandLineRunner {
         this.repo.save(new Employee("Darth","Vader","Sith Lord",george));
 
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("mickey", "password",
-                        AuthorityUtils.createAuthorityList("ROLE_MANAGER")));
+                new UsernamePasswordAuthenticationToken("mickey", DEFAULT_PASSWORD,
+                        AuthorityUtils.createAuthorityList(ROLE_MANAGER)));
 
         this.repo.save(new Employee("Kylo","Ren","Dork",mickey));
         this.repo.save(new Employee("Finn","","Rando",mickey));

@@ -36,11 +36,9 @@ class App extends React.Component {
 			}).then(schema => {
 				//Filter out unneeded JSON schema properties
 				Object.keys(schema.entity.properties).forEach(function (property) {
-					if (schema.entity.properties[property].hasOwnProperty('format') &&
-						schema.entity.properties[property].format === 'uri') {
-						delete schema.entity.properties[property];
-					}
-					else if (schema.entity.properties[property].hasOwnProperty('$ref')) {
+					if ((schema.entity.properties[property].hasOwnProperty('format') &&
+						schema.entity.properties[property].format === 'uri') ||
+						schema.entity.properties[property].hasOwnProperty('$ref')) {
 						delete schema.entity.properties[property];
 					}
 				});
