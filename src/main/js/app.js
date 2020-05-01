@@ -67,7 +67,6 @@ class App extends React.Component {
 
 	// tag::create[]
 	onCreate(newEmployee) {
-		const self = this;
 		follow(client, root, ['employees']).then(response => {
 			return client({
 				method: 'POST',

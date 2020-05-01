@@ -4,13 +4,13 @@ module.exports = function follow(api, rootPath, relArray) {
         path: rootPath
     });
 
-    return relArray.reduce(function(root, arrayItem) {
+    return relArray.reduce(function(raRoot, arrayItem) {
         const rel = typeof arrayItem === 'string' ? arrayItem : arrayItem.rel;
-        return traverseNext(root, rel, arrayItem);
+        return traverseNext(raRoot, rel, arrayItem);
     }, root);
 
-    function traverseNext (root, rel, arrayItem) {
-        return root.then(function (response) {
+    function traverseNext (tnRoot, rel, arrayItem) {
+        return tnRoot.then(function (response) {
             if (hasEmbeddedRel(response.entity, rel)) {
                 return response.entity._embedded[rel];
             }
