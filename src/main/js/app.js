@@ -13,7 +13,7 @@ class App extends React.Component {
 
 	constructor(props) {
 		super(props);
-		this.state = {employees: [], attributes: [], page:1, pageSize: 2, links: {}};
+		this.state = {employees: [], attributes: [], page:1, pageSize: 2, links: {},loggedInManager: this.props.loggedInManager};
 		this.updatePageSize = this.updatePageSize.bind(this);
 		this.onCreate = this.onCreate.bind(this);
 		this.onUpdate = this.onUpdate.bind(this);
@@ -34,6 +34,17 @@ class App extends React.Component {
 				path: employeeCollection.entity._links.profile.href,
 				headers:{'Accept':'application/schema+json'}
 			}).then(schema => {
+				//Filter out unneeded JSON schema properties
+				Object.keys(schema.entity.properties).forEach(function (property) {
+					if (schema.entity.properties[property].hasOwnProperty('format') &&
+						schema.entity.properties[property].format === 'uri') {
+						delete schema.entity.properties[property];
+					}
+					else if (schema.entity.properties[property].hasOwnProperty('$ref')) {
+						delete schema.entity.properties[property];
+					}
+				});
+
 				//set it into the schema so we can reference it later
 				this.schema = schema.entity;
 				this.links = employeeCollection.entity._links;
@@ -80,26 +91,41 @@ class App extends React.Component {
 
 	// tag::delete[]
 	onDelete(employee) {
-		client({method: 'DELETE', path: employee.entity._links.self.href});
+		client({method: 'DELETE', path: employee.entity._links.self.href}).done(response => {
+			//success! let websocket handle the update
+		},response => {
+			if(response.status.code === 403){
+				alert('DENIED: Get outta here with that wack mess');
+			}
+		});
 	}
 	// end::delete[]
 
-	onUpdate(employee,updatedEmployee){
-		client({
-			method:'PUT',
-			path: employee.entity._links.self.href,
-			entity: updatedEmployee,
-			headers: {
-				'Content-Type':'application/json',
-				'If-Match':employee.headers.Etag
-			}
-		}).done(response => {
-			//websocket will handle the page update
-		}, response => {
-			if(response.status.code === 412) {
-				alert('DENIED: Unable to update ' + employee.entity._links.self.href + '. Your copy is stale. :(');
-			}
-		});
+	onUpdate(employee, updatedEmployee) {
+		if(employee.entity.manager.name === this.state.loggedInManager) {
+			updatedEmployee["manager"] = employee.entity.manager;
+			client({
+				method: 'PUT',
+				path: employee.entity._links.self.href,
+				entity: updatedEmployee,
+				headers: {
+					'Content-Type': 'application/json',
+					'If-Match': employee.headers.Etag
+				}
+			}).done(response => {
+				// Websocket will handle the update
+			}, response => {
+				if (response.status.code === 403) {
+					alert('DENIED: You are not authorized to update ' +
+						employee.entity._links.self.href);
+				}
+				if (response.status.code === 412) {
+					alert('DENIED: Unable to update ' + employee.entity._links.self.href + '. Your copy is stale. :(');
+				}
+			});
+		} else {
+			alert("You are not authorized to update");
+		}
 	}
 
 	// tag::navigate[]
@@ -202,7 +228,8 @@ class App extends React.Component {
 							  onNavigate={this.onNavigate}
 							  onUpdate={this.onUpdate}
 							  onDelete={this.onDelete}
-							  updatePageSize={this.updatePageSize}/>
+							  updatePageSize={this.updatePageSize}
+							  loggedInManager={this.state.loggedInManager}/>
 			</div>
 		)
 	}
@@ -288,22 +315,31 @@ class UpdateDialog extends React.Component{
 			</p>
 		);
 		const dialogId = "updateEmployee-" + this.props.employee.entity._links.self.href;
+		const isManagerCorrect = this.props.employee.entity.manager.name === this.props.loggedInManager;
 
-		return(
-			<div key={this.props.employee.entity._links.self.href}>
-				<a href={"#"+dialogId}>Update</a>
-				<div id={dialogId} className="modalDialog">
-					<div>
-						<a href="#" title="Close" className="close">O</a>
-						<h2>Update an Employee</h2>
-						<form>
-							{inputs}
-							<button onClick={this.handleSubmit}>Update</button>
-						</form>
+		if (isManagerCorrect === false) {
+			return (
+				<div>
+					<a>Not Your Employee</a>
+				</div>
+			)
+		} else {
+			return (
+				<div key={this.props.employee.entity._links.self.href}>
+					<a href={"#" + dialogId}>Update</a>
+					<div id={dialogId} className="modalDialog">
+						<div>
+							<a href="#" title="Close" className="close">O</a>
+							<h2>Update an Employee</h2>
+							<form>
+								{inputs}
+								<button onClick={this.handleSubmit}>Update</button>
+							</form>
+						</div>
 					</div>
 				</div>
-			</div>
-		)
+			)
+		}
 	}
 }
 
@@ -360,7 +396,8 @@ class EmployeeList extends React.Component {
 					  employee={employee}
 					  attributes={this.props.attributes}
 					  onUpdate={this.props.onUpdate}
-					  onDelete={this.props.onDelete}/>
+					  onDelete={this.props.onDelete}
+					  loggedInManager={this.props.loggedInManager}/>
 		);
 
 		const navLinks = [];
@@ -386,6 +423,7 @@ class EmployeeList extends React.Component {
 							<th>First Name</th>
 							<th>Last Name</th>
 							<th>Description</th>
+							<th>Manager</th>
 							<th>Edit</th>
 							<th>Delete</th>
 						</tr>
@@ -419,10 +457,12 @@ class Employee extends React.Component {
 				<td>{this.props.employee.entity.firstName}</td>
 				<td>{this.props.employee.entity.lastName}</td>
 				<td>{this.props.employee.entity.description}</td>
+				<td>{this.props.employee.entity.manager.name}</td>
 				<td>
 					<UpdateDialog employee={this.props.employee}
 								  attributes={this.props.attributes}
-								  onUpdate={this.props.onUpdate}/>
+								  onUpdate={this.props.onUpdate}
+								  loggedInManager={this.props.loggedInManager}/>
 				</td>
 				<td>
 					<button onClick={this.handleDelete}>Delete</button>
@@ -434,6 +474,6 @@ class Employee extends React.Component {
 // end::employee[]
 
 ReactDOM.render(
-	<App />,
+	<App loggedInManager={document.getElementById('managername').innerHTML }/>,
 	document.getElementById('react')
 )
