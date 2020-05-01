@@ -1,5 +1,7 @@
-package com.example.springreact.payroll;
+package com.example.springreact.components;
 
+import com.example.springreact.payroll.Employee;
+import com.example.springreact.payroll.EmployeeRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
