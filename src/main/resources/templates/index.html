@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <title>ReactJS | Spring Data REST</title>
     <link rel="stylesheet" href="/main.css" />
+    <link
+            rel="stylesheet"
+            href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+            integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+            crossorigin="anonymous"
+    />
 </head>
 <body>
-    <div>
-        Hello, <span id="managername" th:text="${#authentication.name}">user</span>.
-        <form th:action="@{/logout}" method="post">
-            <input type="submit" value="Log Out"/>
-        </form>
-    </div>
+    <span style="display:none" id="managername" th:text="${#authentication.name}">user</span>
     <div id="react"></div>
 
     <script src="built/bundle.js"></script>

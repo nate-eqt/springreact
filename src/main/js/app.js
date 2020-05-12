@@ -6,14 +6,19 @@ const client = require('./client');
 const when = require('when');
 const follow = require('./follow'); // function to hop multiple links by "rel"
 const stompClient = require('./websocket-listener');
+import 'bootstrap/dist/css/bootstrap.min.css';
+import Container from 'react-bootstrap/Container';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 
 const root = '/api';
+let displayedEmployee = null;
 
 class App extends React.Component {
-
 	constructor(props) {
 		super(props);
-		this.state = {employees: [], attributes: [], page:1, pageSize: 2, links: {},loggedInManager: this.props.loggedInManager};
+		this.state = {employees: [], attributes: [], page:1, pageSize: 20, links: {},
+			loggedInManager: this.props.loggedInManager};
 		this.updatePageSize = this.updatePageSize.bind(this);
 		this.onCreate = this.onCreate.bind(this);
 		this.onUpdate = this.onUpdate.bind(this);
@@ -50,7 +55,7 @@ class App extends React.Component {
 			});
 		}).then(employeeCollection => {
 			this.page = employeeCollection.entity.page;
-			//now we do a seperate get on each "self" href. This makes Spring Data put a version on each one
+			//now we do a separate get on each "self" href. This makes Spring Data put a version on each one
 			return employeeCollection.entity._embedded.employees.map(employee =>
 				client({
 					method:'GET',
@@ -90,7 +95,7 @@ class App extends React.Component {
 	// tag::delete[]
 	onDelete(employee) {
 		client({method: 'DELETE', path: employee.entity._links.self.href}).done(response => {
-			//success! let websocket handle the update
+			ReactDOM.render(<BlankDiv />,document.getElementById('right-side'));
 		},response => {
 			if(response.status.code === 403){
 				alert('DENIED: Get outta here with that wack mess');
@@ -212,28 +217,86 @@ class App extends React.Component {
 				links: this.links
 			});
 		});
+
+		//refresh view pane
+		client({
+			method: 'GET',
+			path: displayedEmployee
+		}).done(employee => {
+			ReactDOM.render(<EmployeeDetails key={employee.entity._links.self.href}
+											 employee={employee}
+											 attributes={Object.keys(this.schema.properties)}
+											 onUpdate={this.props.onUpdate}
+											 onDelete={this.props.onDelete}
+											 loggedInManager={this.props.loggedInManager}/>,
+				document.getElementById('right-side'));
+		}, response => {
+			if (response.status.code === 404) {
+				ReactDOM.render('The employee you were viewing is no longer available',
+					document.getElementById('right-side'));
+			}
+		});
 	}
-	// end::follow-1[]
 
 	render() {
 		return (
-			<div>
-				<CreateDialog attributes={this.state.attributes} onCreate={this.onCreate}/>
-				<EmployeeList employees={this.state.employees}
-							  links={this.state.links}
-							  pageSize={this.state.pageSize}
-							  attributes={this.state.attributes}
-							  onNavigate={this.onNavigate}
-							  onUpdate={this.onUpdate}
-							  onDelete={this.onDelete}
-							  updatePageSize={this.updatePageSize}
-							  loggedInManager={this.state.loggedInManager}/>
+			<Container fluid="md">
+				<Row>
+					<Col><h1 style={{align: 'center'}}>Employee Central</h1></Col>
+					<Col><MenuBar loggedInManager={this.state.loggedInManager} /></Col>
+				</Row>
+				<Row>
+					<Col>
+
+							<EmployeeList employees={this.state.employees}
+										  links={this.state.links}
+										  pageSize={this.state.pageSize}
+										  attributes={this.state.attributes}
+										  onNavigate={this.onNavigate}
+										  onUpdate={this.onUpdate}
+										  onDelete={this.onDelete}
+										  updatePageSize={this.updatePageSize}
+										  loggedInManager={this.state.loggedInManager}/>
+						<CreateDialog attributes={this.state.attributes} onCreate={this.onCreate}/>
+
+					</Col>
+					<Col>
+						<div id={'right-side'} >Select an Employee</div>
+					</Col>
+				</Row>
+				<Row>Displayed Employee: {displayedEmployee}</Row>
+			</Container>
+
+		)
+	}
+}
+
+class BlankDiv extends React.Component{
+	render(){
+		return(
+			<div id={'right-side'}>Select an Employee</div>
+		)
+	}
+}
+
+class MenuBar extends React.Component{
+	constructor(props){
+		super(props);
+	}
+	render(){
+		return(
+			<div className="dropdown">
+				<button className="dropbtn">{this.props.loggedInManager}</button>
+				<div className="dropdown-content">
+					<a href="#">Employees</a>
+					<a href="#">Other Stuff</a>
+					<a href="#">Log Out</a>
+				</div>
 			</div>
 		)
 	}
 }
 
-// tag::create-dialog[]
 class CreateDialog extends React.Component {
 
 	constructor(props) {
@@ -286,12 +349,10 @@ class CreateDialog extends React.Component {
 	}
 
 }
-// end::create-dialog[]
 
 class UpdateDialog extends React.Component{
 	constructor(props){
 		super(props);
-		console.log('In updateDialog constructor, attrs are ' + this.props.attributes);
 		this.handleSubmit = this.handleSubmit.bind(this);
 	}
 
@@ -342,17 +403,28 @@ class UpdateDialog extends React.Component{
 }
 
 class EmployeeList extends React.Component {
-
 	constructor(props) {
 		super(props);
-		this.handleNavFirst = this.handleNavFirst.bind(this);
-		this.handleNavPrev = this.handleNavPrev.bind(this);
-		this.handleNavNext = this.handleNavNext.bind(this);
-		this.handleNavLast = this.handleNavLast.bind(this);
 		this.handleInput = this.handleInput.bind(this);
+		this.handleChange = this.handleChange.bind(this);
 	}
 
-	// tag::handle-page-size-updates[]
+	handleChange(event){
+		client({
+			method: 'GET',
+			path: event.target.value
+		}).then(employee =>{
+			displayedEmployee = employee.entity._links.self.href;
+			ReactDOM.render(<EmployeeDetails key={employee.entity._links.self.href}
+											 employee={employee}
+											 attributes={this.props.attributes}
+											 onUpdate={this.props.onUpdate}
+											 onDelete={this.props.onDelete}
+											 loggedInManager={this.props.loggedInManager}/>,
+				document.getElementById('right-side'));
+		});
+	}
+
 	handleInput(e) {
 		e.preventDefault();
 		const pageSize = ReactDOM.findDOMNode(this.refs.pageSize).value;
@@ -363,31 +435,6 @@ class EmployeeList extends React.Component {
 				pageSize.substring(0, pageSize.length - 1);
 		}
 	}
-	// end::handle-page-size-updates[]
-
-	// tag::handle-nav[]
-	handleNavFirst(e){
-		e.preventDefault();
-		this.props.onNavigate(this.props.links.first.href);
-	}
-
-	handleNavPrev(e) {
-		e.preventDefault();
-		this.props.onNavigate(this.props.links.prev.href);
-	}
-
-	handleNavNext(e) {
-		e.preventDefault();
-		this.props.onNavigate(this.props.links.next.href);
-	}
-
-	handleNavLast(e) {
-		e.preventDefault();
-		this.props.onNavigate(this.props.links.last.href);
-	}
-	// end::handle-nav[]
-
-	// tag::employee-list-render[]
 	render() {
 		const employees = this.props.employees.map(employee =>
 			<Employee key={employee.entity._links.self.href}
@@ -398,78 +445,57 @@ class EmployeeList extends React.Component {
 					  loggedInManager={this.props.loggedInManager}/>
 		);
 
-		const navLinks = [];
-		if ("first" in this.props.links) {
-			navLinks.push(<button key="first" onClick={this.handleNavFirst}>&lt;&lt;</button>);
-		}
-		if ("prev" in this.props.links) {
-			navLinks.push(<button key="prev" onClick={this.handleNavPrev}>&lt;</button>);
-		}
-		if ("next" in this.props.links) {
-			navLinks.push(<button key="next" onClick={this.handleNavNext}>&gt;</button>);
-		}
-		if ("last" in this.props.links) {
-			navLinks.push(<button key="last" onClick={this.handleNavLast}>&gt;&gt;</button>);
-		}
-
 		return (
 			<div>
-				<input ref="pageSize" defaultValue={this.props.pageSize} onInput={this.handleInput}/>
-				<table>
-					<tbody>
-						<tr>
-							<th>First Name</th>
-							<th>Last Name</th>
-							<th>Description</th>
-							<th>Manager</th>
-							<th>Edit</th>
-							<th>Delete</th>
-						</tr>
-						{employees}
-					</tbody>
-				</table>
-				<div>
-					{navLinks}
-				</div>
+				<select id={employees} size={20} multiple={false} onChange={this.handleChange}>
+					{employees}
+				</select>
 			</div>
 		)
 	}
-	// end::employee-list-render[]
 }
 
-// tag::employee[]
-class Employee extends React.Component {
-
-	constructor(props) {
+class EmployeeDetails extends React.Component {
+	//expecting 'employee'
+	constructor(props){
 		super(props);
 		this.handleDelete = this.handleDelete.bind(this);
 	}
-
 	handleDelete() {
 		this.props.onDelete(this.props.employee);
 	}
-
-	render() {
-		return (
-			<tr>
-				<td>{this.props.employee.entity.firstName}</td>
-				<td>{this.props.employee.entity.lastName}</td>
-				<td>{this.props.employee.entity.description}</td>
-				<td>{this.props.employee.entity.manager.name}</td>
-				<td>
-					<UpdateDialog employee={this.props.employee}
-								  attributes={this.props.attributes}
-								  onUpdate={this.props.onUpdate}
-								  loggedInManager={this.props.loggedInManager}/>
-				</td>
-				<td>
-					<button onClick={this.handleDelete}>Delete</button>
-				</td>
-			</tr>
+	render(){
+		return(
+			<div id={this.props.employee.entity.id}>
+				<ul>
+					<li>First Name: {this.props.employee.entity.firstName}</li>
+					<li>Last Name: {this.props.employee.entity.lastName}</li>
+					<li>Description: {this.props.employee.entity.description}</li>
+					<li>
+						<UpdateDialog employee={this.props.employee}
+						  attributes={this.props.attributes}
+						  onUpdate={this.props.onUpdate}
+						  loggedInManager={this.props.loggedInManager}/>
+					</li>
+					<li><button onClick={this.handleDelete}>Delete</button></li>
+				</ul>
+			</div>
 		)
 	}
 }
-// end::employee[]
+
+class Employee extends React.Component {
+	constructor(props) {
+		super(props);
+	}
+	render() {
+		return (
+			<option value={this.props.employee.entity._links.self.href}>
+				{this.props.employee.entity.firstName + ' ' + this.props.employee.entity.lastName}
+			</option>
+		)
+	}
+}
 
 ReactDOM.render(
 	<App loggedInManager={document.getElementById('managername').innerHTML }/>,

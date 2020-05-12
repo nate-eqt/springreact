@@ -17,11 +17,16 @@
     "accessibility"
   ],
   "dependencies": {
+    "boostrap": "^2.0.0",
+    "bootstrap": "^4.4.1",
+    "jquery": "^3.5.1",
     "net": "^1.0.2",
     "react": "^16.5.2",
+    "react-bootstrap": "^1.0.1",
     "react-dom": "^16.5.2",
     "rest": "^1.3.1",
-    "stompjs": "^2.3.3"
+    "stompjs": "^2.3.3",
+    "typescript": "^3.8.3"
   },
   "author": "Nathan East",
   "license": "ISC",
@@ -34,7 +39,9 @@
     "@babel/preset-env": "^7.1.0",
     "@babel/preset-react": "^7.0.0",
     "babel-loader": "^8.0.2",
+    "css-loader": "^3.5.3",
     "sockjs-client": "^1.4.0",
+    "ts-loader": "^7.0.3",
     "webpack": "^4.19.1",
     "webpack-cli": "^3.1.0"
   }
