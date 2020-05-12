@@ -241,10 +241,12 @@ class App extends React.Component {
 	render() {
 		return (
 			<Container fluid="md">
+				<header id={'mu-hero'}>
 				<Row>
-					<Col><h1 style={{align: 'center'}}>Employee Central</h1></Col>
+					<Col lg={9}><span class={"mu-title"}><h1>Employee Central</h1></span></Col>
 					<Col><MenuBar loggedInManager={this.state.loggedInManager} /></Col>
 				</Row>
+				</header>
 				<Row>
 					<Col>
 
@@ -264,7 +266,6 @@ class App extends React.Component {
 						<div id={'right-side'} >Select an Employee</div>
 					</Col>
 				</Row>
-				<Row>Displayed Employee: {displayedEmployee}</Row>
 			</Container>
 
 		)
