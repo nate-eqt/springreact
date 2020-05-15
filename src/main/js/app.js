@@ -1,5 +1,7 @@
 'use strict';
 
+import NavbarToggle from "react-bootstrap/NavbarToggle";
+
 const React = require('react');
 const ReactDOM = require('react-dom');
 const client = require('./client');
@@ -11,6 +13,10 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import ReactModal from 'react-modal';
+import NavbarCollapse from "react-bootstrap/NavbarCollapse";
+import {NavDropdown, NavLink} from "react-bootstrap";
+import NavbarBrand from "react-bootstrap/NavbarBrand";
+import Navbar from "react-bootstrap/Navbar";
 
 const root = '/api';
 let displayedEmployee = null;
@@ -40,7 +46,6 @@ class App extends React.Component {
 		this.onDelete = this.onDelete.bind(this);
 		this.onNavigate = this.onNavigate.bind(this);
 		this.refreshCurrentPage = this.refreshCurrentPage.bind(this);
-		this.refreshAndGoToLastPage = this.refreshAndGoToLastPage.bind(this);
 		this.toggleOpen = this.toggleOpen.bind(this);
 		this.handleNewEmpSubmit = this.handleNewEmpSubmit.bind(this);
 	}
@@ -210,22 +215,6 @@ class App extends React.Component {
 		])
 	}
 
-	refreshAndGoToLastPage(message){
-		follow(client,root,[{
-			rel:'employees',
-			params:{
-				size:this.state.pageSize,
-				page:this.state.page.number
-			}
-		}]).done(response =>{
-			if(response.entity._links.last !== undefined){
-				this.onNavigate(response.entity._links.last.href);
-			}else{
-				this.onNavigate(response.entity._links.self.href);
-			}
-		})
-	}
-
 	refreshCurrentPage(message){
 		follow(client,root,[{
 			rel:'employees',
@@ -286,14 +275,24 @@ class App extends React.Component {
 		return (
 			<Container fluid="md">
 				<header id={'mu-hero'}>
-				<Row>
-					<Col lg={9}><span className={"mu-title"}><h1>Employee Central</h1></span></Col>
-					<Col><MenuBar loggedInManager={this.state.loggedInManager} /></Col>
-				</Row>
+					<Row>
+						<div class="col">
+							<Navbar bg="primary" variant="dark">
+								<NavbarBrand id="basic-nav-brand" href={'#'}>Employee Central</NavbarBrand>
+								<NavbarToggle aria-controls={'basic-navbar-nav'} />
+								<NavbarCollapse  id={'basic-navbar-nav'} />
+								<NavDropdown id="basic-nav-dropdown" title={this.state.loggedInManager} aria-label="Actions Menu">
+									<NavDropdown.Item href="#" role="menuitem">Employees</NavDropdown.Item>
+									<NavDropdown.Item href="#" role="menuitem">Locations</NavDropdown.Item>
+									<NavDropdown.Item href="#" role="menuitem">Log Out</NavDropdown.Item>
+								</NavDropdown>
+
+							</Navbar>
+						</div>
+					</Row>
 				</header>
 				<Row>
-					<Col>
-
+					<div class="col">
 							<EmployeeList employees={this.state.employees}
 										  links={this.state.links}
 										  pageSize={this.state.pageSize}
@@ -302,8 +301,10 @@ class App extends React.Component {
 										  onUpdate={this.onUpdate}
 										  onDelete={this.onDelete}
 										  updatePageSize={this.updatePageSize}
-										  loggedInManager={this.state.loggedInManager}/>
-						<button onClick={this.toggleOpen} >New Employee</button>
+										  loggedInManager={this.state.loggedInManager}
+										  aria-label={'Employee List'}
+										  />
+						<button onClick={this.toggleOpen} tabIndex="99">New Employee</button>
 						<ReactModal
 							isOpen={this.state.showModal}
 							contentLabel={"Employee Creation Modal"}
@@ -320,11 +321,11 @@ class App extends React.Component {
 								</div>
 							</div>
 						</ReactModal>
-						<button onClick={()=>{console.log(this.state)}}>Show State</button>
-					</Col>
-					<Col>
+						{/*<button onClick={()=>{console.log(this.state)}}>Show State</button>*/}
+					</div>
+					<div class="col col-lg-10">
 						<div id={'right-side'} >Select an Employee</div>
-					</Col>
+					</div>
 				</Row>
 			</Container>
 
@@ -335,7 +336,7 @@ class App extends React.Component {
 class BlankDiv extends React.Component{
 	render(){
 		return(
-			<div id={'right-side'}>Select an Employee</div>
+			<div id={'right-side'} >Select an Employee</div>
 		)
 	}
 }
@@ -346,13 +347,27 @@ class MenuBar extends React.Component{
 	}
 	render(){
 		return(
-			<div className="dropdown">
-				<button aria-label={'Menu'} className="dropbtn">{this.props.loggedInManager}</button>
-				<div className="dropdown-content">
-					<a href="#">Employees</a>
-					<a href="#">Other Stuff</a>
-					<a href="#">Log Out</a>
-				</div>
+			<div className="dropdown" aria-label={'User Actions Menu'}>
+				{/*<button aria-label={'Menu'} className="dropbtn">{this.props.loggedInManager}</button>*/}
+				{/*<div className="dropdown-content">*/}
+				{/*	<a href="#" >Employees</a>*/}
+				{/*	<a href="#" >Other Stuff</a>*/}
+				{/*	<a href="#" >Log Out</a>*/}
+				{/*</div>*/}
+				<ul >
+					<li class={'menu__item'}>
+						<p tabIndex={0}>{this.props.loggedInManager}</p>
+						<ul class={'submenu__item'}>
+							<a href="#" >Employees</a>
+						</ul>
+						<ul className={'submenu__item'}>
+							<a href="#">Locations</a>
+						</ul>
+						<ul className={'submenu__item'}>
+							<a href="#">Log Out</a>
+						</ul>
+					</li>
+				</ul>
 			</div>
 		)
 	}
@@ -402,7 +417,7 @@ class EmployeeList extends React.Component {
 		);
 
 		return (
-			<div>
+			<div id={'employee-list'}>
 				<select id={employees} size={20} multiple={false} onChange={this.handleChange}>
 					{employees}
 				</select>
@@ -448,22 +463,20 @@ class EmployeeDetails extends React.Component {
 		const isManagerCorrect = this.props.employee.entity.manager.name === this.props.loggedInManager;
 
 		return(
-			<div id={this.props.employee.entity.id} tabIndex={4}>
+			<div id={this.props.employee.entity.id} tabIndex={0}>
 				<h2>Employee Details</h2>
 				<dl>
-					<dt id={'firstName'} tabIndex={'-1'}>First Name: </dt>
-					<dd aria-labelledby={'firstName'}>{this.props.employee.entity.firstName}</dd>
+					<dt id={'firstName'} >First Name: </dt>
+					<dd id={'firstNameVal'} aria-labelledby={'firstName'}>{this.props.employee.entity.firstName}</dd>
 
-					<dt id={'lastName' } tabIndex={'-1'}>Last Name: </dt>
-					<dd aria-labelledby={'lastName'}>{this.props.employee.entity.lastName}</dd>
+					<dt id={'lastName' } >Last Name: </dt>
+					<dd id={'lastNameVal'} aria-labelledby={'lastName'}>{this.props.employee.entity.lastName}</dd>
 
-					<dt id={'description'} tabIndex={'-1'}>Description: </dt>
-					<dd aria-labelledby={'description'}>{this.props.employee.entity.description}</dd>
-
+					<dt id={'description'} >Description: </dt>
+					<dd id={'descVal'} aria-labelledby={'description'}>{this.props.employee.entity.description}</dd>
+				</dl>
 					<span style={{display : isManagerCorrect ? 'block' : 'none', ariaHidden : isManagerCorrect ? 'false' : 'true'}}>
-						<dt id={'updateDetails'} tabIndex={'-1'}>Update Details</dt>
-						<dd aria-labelledby={'updateDetails'}>
-							<button onClick={this.toggleUpdateModal}>Update Employee Details</button>
+						<button onClick={this.toggleUpdateModal} >Update Employee</button>
 						<ReactModal
 							isOpen={this.state.showUpdateModal}
 							contentLabel={"Employee Update Modal"}
@@ -482,12 +495,10 @@ class EmployeeDetails extends React.Component {
 								</div>
 							</div>
 						</ReactModal>
-						</dd>
 
-						<dt id={'deleteEmployee'} tabIndex={'-1'}>Delete Employee</dt>
-						<dd aria-labelledby={'deleteEmployee'}><button onClick={this.handleDelete}>Delete</button></dd>
+						&nbsp;
+						<button onClick={this.handleDelete} >Delete Employee</button>
 					</span>
-				</dl>
 			</div>
 		)
 	}
