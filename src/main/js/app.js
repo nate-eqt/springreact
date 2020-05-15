@@ -11,7 +11,6 @@ const stompClient = require('./websocket-listener');
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
 import ReactModal from 'react-modal';
 import NavbarCollapse from "react-bootstrap/NavbarCollapse";
 import {NavDropdown, NavLink} from "react-bootstrap";
@@ -278,7 +277,13 @@ class App extends React.Component {
 					<Row>
 						<div class="col">
 							<Navbar bg="primary" variant="dark">
-								<NavbarBrand id="basic-nav-brand" href={'#'}>Employee Central</NavbarBrand>
+								<NavbarBrand id="basic-nav-brand" href={'#'}>
+									<img src="/empire.svg"
+										 width={48}
+										 height={48}
+										 className={'d-inline-block align-top'}
+										 alt={'Brand Logo'} />
+									Employee Central</NavbarBrand>
 								<NavbarToggle aria-controls={'basic-navbar-nav'} />
 								<NavbarCollapse  id={'basic-navbar-nav'} />
 								<NavDropdown id="basic-nav-dropdown" title={this.state.loggedInManager} aria-label="Actions Menu">
@@ -341,38 +346,6 @@ class BlankDiv extends React.Component{
 	}
 }
 
-class MenuBar extends React.Component{
-	constructor(props){
-		super(props);
-	}
-	render(){
-		return(
-			<div className="dropdown" aria-label={'User Actions Menu'}>
-				{/*<button aria-label={'Menu'} className="dropbtn">{this.props.loggedInManager}</button>*/}
-				{/*<div className="dropdown-content">*/}
-				{/*	<a href="#" >Employees</a>*/}
-				{/*	<a href="#" >Other Stuff</a>*/}
-				{/*	<a href="#" >Log Out</a>*/}
-				{/*</div>*/}
-				<ul >
-					<li class={'menu__item'}>
-						<p tabIndex={0}>{this.props.loggedInManager}</p>
-						<ul class={'submenu__item'}>
-							<a href="#" >Employees</a>
-						</ul>
-						<ul className={'submenu__item'}>
-							<a href="#">Locations</a>
-						</ul>
-						<ul className={'submenu__item'}>
-							<a href="#">Log Out</a>
-						</ul>
-					</li>
-				</ul>
-			</div>
-		)
-	}
-}
-
 class EmployeeList extends React.Component {
 	constructor(props) {
 		super(props);
@@ -427,7 +400,6 @@ class EmployeeList extends React.Component {
 }
 
 class EmployeeDetails extends React.Component {
-	//expecting 'employee'
 	constructor(props){
 		super(props);
 		this.state = {showUpdateModal:false};
@@ -464,17 +436,17 @@ class EmployeeDetails extends React.Component {
 
 		return(
 			<div id={this.props.employee.entity.id} tabIndex={0}>
-				<h2>Employee Details</h2>
-				<dl>
-					<dt id={'firstName'} >First Name: </dt>
-					<dd id={'firstNameVal'} aria-labelledby={'firstName'}>{this.props.employee.entity.firstName}</dd>
+				<legend>Employee Details</legend>
+				<fieldset>
+					<label id={'fnl'} >First Name: </label>
+					<p id={'firstName'} aria-labelledby={'fnl'}>{this.props.employee.entity.firstName}</p>
 
-					<dt id={'lastName' } >Last Name: </dt>
-					<dd id={'lastNameVal'} aria-labelledby={'lastName'}>{this.props.employee.entity.lastName}</dd>
+					<label id={'lnl'} >Last Name: </label>
+					<p id={'lastName'} aria-labelledby={'lnl'}>{this.props.employee.entity.lastName}</p>
 
-					<dt id={'description'} >Description: </dt>
-					<dd id={'descVal'} aria-labelledby={'description'}>{this.props.employee.entity.description}</dd>
-				</dl>
+					<label id={'dl'} >Description: </label>
+					<p id={'desc'} aria-labelledby={'dl'}>{this.props.employee.entity.description}</p>
+				</fieldset>
 					<span style={{display : isManagerCorrect ? 'block' : 'none', ariaHidden : isManagerCorrect ? 'false' : 'true'}}>
 						<button onClick={this.toggleUpdateModal} >Update Employee</button>
 						<ReactModal

@@ -2,6 +2,10 @@ input.field {
     width: 90%;
 }
 
+label {
+    font-weight:bold;
+}
+
 select{
     overflow-y: auto;
     width: 100%;
