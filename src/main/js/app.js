@@ -10,15 +10,30 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import ReactModal from 'react-modal';
 
 const root = '/api';
 let displayedEmployee = null;
+
+const modalStyle = {
+	content : {
+		top                   : '50%',
+		left                  : '50%',
+		right                 : 'auto',
+		bottom                : 'auto',
+		marginRight           : '-50%',
+		transform             : 'translate(-50%, -50%)'
+	}
+};
+
+ReactModal.setAppElement('#react')
+//or possibly createEmployee
 
 class App extends React.Component {
 	constructor(props) {
 		super(props);
 		this.state = {employees: [], attributes: [], page:1, pageSize: 20, links: {},
-			loggedInManager: this.props.loggedInManager};
+			loggedInManager: this.props.loggedInManager, showModal:false};
 		this.updatePageSize = this.updatePageSize.bind(this);
 		this.onCreate = this.onCreate.bind(this);
 		this.onUpdate = this.onUpdate.bind(this);
@@ -26,6 +41,14 @@ class App extends React.Component {
 		this.onNavigate = this.onNavigate.bind(this);
 		this.refreshCurrentPage = this.refreshCurrentPage.bind(this);
 		this.refreshAndGoToLastPage = this.refreshAndGoToLastPage.bind(this);
+		this.toggleOpen = this.toggleOpen.bind(this);
+		this.handleNewEmpSubmit = this.handleNewEmpSubmit.bind(this);
+	}
+
+	toggleOpen(){
+		this.setState(state=> ({
+			showModal: !state.showModal
+		}));
 	}
 
 	loadFromServer(pageSize){
@@ -77,9 +100,22 @@ class App extends React.Component {
 		});
 	}
 
-	// end::follow-2[]
+	handleNewEmpSubmit(e) {
+		e.preventDefault();
+		const newEmployee = {};
+		this.state.attributes.forEach(attribute => {
+			newEmployee[attribute] = ReactDOM.findDOMNode(this.refs[attribute]).value.trim();
+		});
+		this.onCreate(newEmployee);
 
-	// tag::create[]
+		// clear out the dialog's inputs
+		this.state.attributes.forEach(attribute => {
+			ReactDOM.findDOMNode(this.refs[attribute]).value = '';
+		});
+
+		this.toggleOpen();
+	}
+
 	onCreate(newEmployee) {
 		follow(client, root, ['employees']).then(response => {
 			return client({
@@ -90,9 +126,7 @@ class App extends React.Component {
 			})
 		})
 	}
-	// end::create[]
 
-	// tag::delete[]
 	onDelete(employee) {
 		client({method: 'DELETE', path: employee.entity._links.self.href}).done(response => {
 			ReactDOM.render(<BlankDiv />,document.getElementById('right-side'));
@@ -102,7 +136,6 @@ class App extends React.Component {
 			}
 		});
 	}
-	// end::delete[]
 
 	onUpdate(employee, updatedEmployee) {
 		if(employee.entity.manager.name === this.state.loggedInManager) {
@@ -171,7 +204,7 @@ class App extends React.Component {
 	componentDidMount() {
 		this.loadFromServer(this.state.pageSize);
 		stompClient.register([
-			{route: '/topic/newEmployee', callback: this.refreshAndGoToLastPage},
+			{route: '/topic/newEmployee', callback: this.refreshCurrentPage},
 			{route: '/topic/updateEmployee', callback: this.refreshCurrentPage},
 			{route: '/topic/deleteEmployee', callback: this.refreshCurrentPage}
 		])
@@ -180,7 +213,10 @@ class App extends React.Component {
 	refreshAndGoToLastPage(message){
 		follow(client,root,[{
 			rel:'employees',
-			params:{size:this.state.pageSize}
+			params:{
+				size:this.state.pageSize,
+				page:this.state.page.number
+			}
 		}]).done(response =>{
 			if(response.entity._links.last !== undefined){
 				this.onNavigate(response.entity._links.last.href);
@@ -219,31 +255,39 @@ class App extends React.Component {
 		});
 
 		//refresh view pane
-		client({
-			method: 'GET',
-			path: displayedEmployee
-		}).done(employee => {
-			ReactDOM.render(<EmployeeDetails key={employee.entity._links.self.href}
-											 employee={employee}
-											 attributes={Object.keys(this.schema.properties)}
-											 onUpdate={this.props.onUpdate}
-											 onDelete={this.props.onDelete}
-											 loggedInManager={this.props.loggedInManager}/>,
-				document.getElementById('right-side'));
-		}, response => {
-			if (response.status.code === 404) {
-				ReactDOM.render('The employee you were viewing is no longer available',
+		if(displayedEmployee != null) {
+			client({
+				method: 'GET',
+				path: displayedEmployee
+			}).done(employee => {
+				ReactDOM.render(<EmployeeDetails key={employee.entity._links.self.href}
+												 employee={employee}
+												 attributes={Object.keys(this.schema.properties)}
+												 onUpdate={this.props.onUpdate}
+												 onDelete={this.props.onDelete}
+												 loggedInManager={this.props.loggedInManager}/>,
 					document.getElementById('right-side'));
-			}
-		});
+			}, response => {
+				if (response.status.code === 404) {
+					ReactDOM.render('The employee you were viewing is no longer available',
+						document.getElementById('right-side'));
+				}
+			});
+		}
 	}
 
 	render() {
+		const newEmpInputs = this.state.attributes.map(attribute =>
+			<p key={attribute}>
+				<input type="text" placeholder={attribute} ref={attribute} className="field" aria-label={attribute}/>
+			</p>
+		);
+
 		return (
 			<Container fluid="md">
 				<header id={'mu-hero'}>
 				<Row>
-					<Col lg={9}><span class={"mu-title"}><h1>Employee Central</h1></span></Col>
+					<Col lg={9}><span className={"mu-title"}><h1>Employee Central</h1></span></Col>
 					<Col><MenuBar loggedInManager={this.state.loggedInManager} /></Col>
 				</Row>
 				</header>
@@ -259,8 +303,24 @@ class App extends React.Component {
 										  onDelete={this.onDelete}
 										  updatePageSize={this.updatePageSize}
 										  loggedInManager={this.state.loggedInManager}/>
-						<CreateDialog attributes={this.state.attributes} onCreate={this.onCreate}/>
-
+						<button onClick={this.toggleOpen} >New Employee</button>
+						<ReactModal
+							isOpen={this.state.showModal}
+							contentLabel={"Employee Creation Modal"}
+							onRequestClose={this.toggleOpen}
+							style={modalStyle}>
+							<div id="createEmployee" aria-label={'Create New Employee'}>
+								<div>
+									<h2>Create new employee</h2>
+									<form>
+										{newEmpInputs}
+										<button onClick={this.handleNewEmpSubmit} aria-label={'Create'}>Create</button>
+										<button onClick={this.toggleOpen} aria-label={'Cancel'}>Cancel</button>
+									</form>
+								</div>
+							</div>
+						</ReactModal>
+						<button onClick={()=>{console.log(this.state)}}>Show State</button>
 					</Col>
 					<Col>
 						<div id={'right-side'} >Select an Employee</div>
@@ -287,7 +347,7 @@ class MenuBar extends React.Component{
 	render(){
 		return(
 			<div className="dropdown">
-				<button className="dropbtn">{this.props.loggedInManager}</button>
+				<button aria-label={'Menu'} className="dropbtn">{this.props.loggedInManager}</button>
 				<div className="dropdown-content">
 					<a href="#">Employees</a>
 					<a href="#">Other Stuff</a>
@@ -295,111 +355,6 @@ class MenuBar extends React.Component{
 				</div>
 			</div>
 		)
-	}
-}
-
-class CreateDialog extends React.Component {
-
-	constructor(props) {
-		super(props);
-		this.handleSubmit = this.handleSubmit.bind(this);
-	}
-
-	handleSubmit(e) {
-		e.preventDefault();
-		const newEmployee = {};
-		this.props.attributes.forEach(attribute => {
-			newEmployee[attribute] = ReactDOM.findDOMNode(this.refs[attribute]).value.trim();
-		});
-		this.props.onCreate(newEmployee);
-
-		// clear out the dialog's inputs
-		this.props.attributes.forEach(attribute => {
-			ReactDOM.findDOMNode(this.refs[attribute]).value = '';
-		});
-
-		// Navigate away from the dialog to hide it.
-		window.location = "#";
-	}
-
-	render() {
-		const inputs = this.props.attributes.map(attribute =>
-			<p key={attribute}>
-				<input type="text" placeholder={attribute} ref={attribute} className="field"/>
-			</p>
-		);
-
-		return (
-			<div>
-				<a href="#createEmployee">Create</a>
-
-				<div id="createEmployee" className="modalDialog">
-					<div>
-						<a href="#" title="Close" className="close">X</a>
-
-						<h2>Create new employee</h2>
-
-						<form>
-							{inputs}
-							<button onClick={this.handleSubmit}>Create</button>
-						</form>
-					</div>
-				</div>
-			</div>
-		)
-	}
-
-}
-
-class UpdateDialog extends React.Component{
-	constructor(props){
-		super(props);
-		this.handleSubmit = this.handleSubmit.bind(this);
-	}
-
-	handleSubmit(e){
-		e.preventDefault();
-		const updatedEmployee = {};
-		this.props.attributes.forEach(attribute => {
-			updatedEmployee[attribute] = ReactDOM.findDOMNode(this.refs[attribute]).value.trim();
-		});
-		this.props.onUpdate(this.props.employee,updatedEmployee);
-		window.location="#";
-	}
-
-	render(){
-		const inputs = this.props.attributes.map(attribute =>
-			<p key={this.props.employee.entity[attribute]}>
-				<input type="text" placeholder={attribute}
-					   defaultValue={this.props.employee.entity[attribute]} ref={attribute} className="field" />
-			</p>
-		);
-		const dialogId = "updateEmployee-" + this.props.employee.entity._links.self.href;
-		const isManagerCorrect = this.props.employee.entity.manager.name === this.props.loggedInManager;
-
-		if (isManagerCorrect === false) {
-			return (
-				<div>
-					<a>Not Your Employee</a>
-				</div>
-			)
-		} else {
-			return (
-				<div key={this.props.employee.entity._links.self.href}>
-					<a href={"#" + dialogId}>Update</a>
-					<div id={dialogId} className="modalDialog">
-						<div>
-							<a href="#" title="Close" className="close">O</a>
-							<h2>Update an Employee</h2>
-							<form>
-								{inputs}
-								<button onClick={this.handleSubmit}>Update</button>
-							</form>
-						</div>
-					</div>
-				</div>
-			)
-		}
 	}
 }
 
@@ -460,26 +415,79 @@ class EmployeeDetails extends React.Component {
 	//expecting 'employee'
 	constructor(props){
 		super(props);
+		this.state = {showUpdateModal:false};
 		this.handleDelete = this.handleDelete.bind(this);
+		this.handleUpdateSubmit = this.handleUpdateSubmit.bind(this);
+		this.toggleUpdateModal = this.toggleUpdateModal.bind(this);
 	}
 	handleDelete() {
 		this.props.onDelete(this.props.employee);
 	}
+	handleUpdateSubmit(e){
+		e.preventDefault();
+		const updatedEmployee = {};
+		this.props.attributes.forEach(attribute => {
+			updatedEmployee[attribute] = ReactDOM.findDOMNode(this.refs[attribute]).value.trim();
+		});
+		this.props.onUpdate(this.props.employee,updatedEmployee);
+		this.toggleUpdateModal();
+	}
+	toggleUpdateModal(){
+		this.setState(state=> ({
+			showUpdateModal: !state.showUpdateModal
+		}));
+	}
 	render(){
+		const inputs = this.props.attributes.map(attribute =>
+			<p key={this.props.employee.entity[attribute]}>
+				<input type="text" placeholder={attribute}
+					   defaultValue={this.props.employee.entity[attribute]} ref={attribute} className="field" />
+			</p>
+		);
+		const dialogId = "updateEmployee-" + this.props.employee.entity._links.self.href;
+		const isManagerCorrect = this.props.employee.entity.manager.name === this.props.loggedInManager;
+
 		return(
-			<div id={this.props.employee.entity.id}>
-				<ul>
-					<li>First Name: {this.props.employee.entity.firstName}</li>
-					<li>Last Name: {this.props.employee.entity.lastName}</li>
-					<li>Description: {this.props.employee.entity.description}</li>
-					<li>
-						<UpdateDialog employee={this.props.employee}
-						  attributes={this.props.attributes}
-						  onUpdate={this.props.onUpdate}
-						  loggedInManager={this.props.loggedInManager}/>
-					</li>
-					<li><button onClick={this.handleDelete}>Delete</button></li>
-				</ul>
+			<div id={this.props.employee.entity.id} tabIndex={4}>
+				<h2>Employee Details</h2>
+				<dl>
+					<dt id={'firstName'} tabIndex={'-1'}>First Name: </dt>
+					<dd aria-labelledby={'firstName'}>{this.props.employee.entity.firstName}</dd>
+
+					<dt id={'lastName' } tabIndex={'-1'}>Last Name: </dt>
+					<dd aria-labelledby={'lastName'}>{this.props.employee.entity.lastName}</dd>
+
+					<dt id={'description'} tabIndex={'-1'}>Description: </dt>
+					<dd aria-labelledby={'description'}>{this.props.employee.entity.description}</dd>
+
+					<span style={{display : isManagerCorrect ? 'block' : 'none', ariaHidden : isManagerCorrect ? 'false' : 'true'}}>
+						<dt id={'updateDetails'} tabIndex={'-1'}>Update Details</dt>
+						<dd aria-labelledby={'updateDetails'}>
+							<button onClick={this.toggleUpdateModal}>Update Employee Details</button>
+						<ReactModal
+							isOpen={this.state.showUpdateModal}
+							contentLabel={"Employee Update Modal"}
+							onRequestClose={this.toggleUpdateModal}
+							style={modalStyle}>
+							<h2>Update Employee Details</h2>
+							<div key={this.props.employee.entity._links.self.href}>
+								<div id={dialogId} className="modalDialog">
+									<div>
+										<form>
+											{inputs}
+											<button onClick={this.handleUpdateSubmit}>Update</button>&nbsp;
+											<button onClick={this.toggleUpdateModal}>Cancel</button>
+										</form>
+									</div>
+								</div>
+							</div>
+						</ReactModal>
+						</dd>
+
+						<dt id={'deleteEmployee'} tabIndex={'-1'}>Delete Employee</dt>
+						<dd aria-labelledby={'deleteEmployee'}><button onClick={this.handleDelete}>Delete</button></dd>
+					</span>
+				</dl>
 			</div>
 		)
 	}
